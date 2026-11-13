@@ -1,0 +1,21 @@
+{
+  "name": "happy-skills",
+  "description": "happy 的 Claude Code skill",
+  "owner": {
+    "name": "happy"
+  },
+  "plugins": [
+    {
+      "name": "doc-tools",
+      "description": "文件外发工具:证件、执照、合同发给第三方前自动加「仅用于 XX,他用无效」水印,全程脚本处理、不看图",
+      "source": "./plugins/doc-tools",
+      "category": "productivity"
+    },
+    {
+      "name": "device",
+      "description": "真机操控:iPhone(WebDriverAgent)截屏 / 点击 / 输入;安卓专机 SmsForwarder 短信转发到飞书群 + adb 操控",
+      "source": "./plugins/device",
+      "category": "productivity"
+    }
+  ]
+}

@@ -8,7 +8,7 @@ allowed-tools: Bash, Read
 
 手机用数据线连 Mac → `wda-start.sh` 编译并启动 WebDriverAgent、把手机 8100 端口转到 Mac → 用 `w.py` 截屏 / 读元素 / 点击 / 输入 → 用完 `wda-stop.sh` 关掉。
 
-脚本在本 skill 的 `scripts/` 目录。下面用 `S` 代指它:`S=~/.claude/skills/iphone-wda/scripts`。
+脚本在本 skill 的 `scripts/` 目录。下面用 `S` 代指它:`S="${CLAUDE_PLUGIN_ROOT}/skills/iphone-wda/scripts"`。
 
 ## 0. 一次性准备(每台 Mac / 每台手机第一次)
 

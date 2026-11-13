@@ -1,0 +1,8 @@
+{
+  "name": "doc-tools",
+  "version": "1.0.0",
+  "description": "文件外发工具:证件、执照、合同发给第三方前自动加「仅用于 XX,他用无效」水印,全程脚本处理、不看图",
+  "author": {
+    "name": "happy"
+  }
+}

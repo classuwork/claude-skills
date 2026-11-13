@@ -8,7 +8,7 @@ allowed-tools: Bash, Read
 
 **一张卡 = 一台安卓机 = 一个飞书群。** 安卓专机插收码卡,装 SmsForwarder,通过飞书群「自定义机器人」Webhook 把短信转到只含看码人的飞书群。iPhone 不行(装不了 SmsForwarder,快捷指令转发 2026-09 实测走不通)。
 
-脚本在本 skill 的 `scripts/` 目录,下面用 `S` 代指它:`S=~/.claude/skills/sms-forwarder/scripts`。
+脚本在本 skill 的 `scripts/` 目录,下面用 `S` 代指它:`S="${CLAUDE_PLUGIN_ROOT}/skills/sms-forwarder/scripts"`。
 
 ## 0. Mac 上的工具(一次性)
 
