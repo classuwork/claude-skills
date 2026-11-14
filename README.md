@@ -4,7 +4,7 @@ happy 自己写的 Claude Code skill，按插件市场格式组织，市场名�
 
 | 插件 | skill | 干什么 | 要先装的东西 |
 |---|---|---|---|
-| [`doc-tools`](plugins/doc-tools) | [`watermark`](plugins/doc-tools/skills/watermark/SKILL.md) | 证件、执照、合同发给第三方之前，自动加「仅用于 XX，他用无效」斜向水印。全程用脚本处理，Claude 不打开图片 | Python 3.9+、Pillow；处理 PDF 还要 poppler |
+| [`doc-tools`](plugins/doc-tools) | [`watermark`](plugins/doc-tools/skills/watermark/SKILL.md) | 证件、执照、合同发给第三方之前，自动加「仅用于 XX，他用无效」斜向水印。全程用脚本处理，Claude 不打开图片 | Python 3.9+（Pillow 第一次用时自动装）；处理 PDF 要 poppler |
 | [`device`](plugins/device) | [`iphone-wda`](plugins/device/skills/iphone-wda/SKILL.md) | 让 Claude 操控用数据线连在 Mac 上的 iPhone：截屏、找按钮、点击、输入、滑动 | macOS、Xcode、libimobiledevice |
 | | [`sms-forwarder`](plugins/device/skills/sms-forwarder/SKILL.md) | 用一台安卓专机把收到的短信验证码转发到飞书群；也能让 Claude 通过 adb 操控安卓手机 | adb、scrcpy |
 
@@ -132,7 +132,11 @@ done
 
 带电子签章的 PDF 加水印会让签章失效，遇到这种情况会先问。
 
-**依赖**：Python 3.9+、Pillow（`pip3 install Pillow`）；处理 PDF 还需要 poppler（`brew install poppler`）。
+**依赖**：
+
+- Python 3.9 以上。Mac 自带的就可以；第一次在终端跑 `python3` 时，如果弹出提示，按提示装命令行工具。
+- **Pillow 不用自己装。** 系统 Python 里没有 Pillow 时，第一次加水印会自动在插件自己的数据目录里建一个虚拟环境装上，终端会打出一行「首次使用…」，以后直接复用，卸载插件时一起删掉。Homebrew 或 uv 装的 Python 不让 `pip3 install`（会报 `externally-managed-environment`），这种情况也照样能用（2026-11-14 在 uv 的 Python 3.12 和苹果自带的 Python 3.9 上实测过）。
+- 处理 PDF 要 poppler：`brew install poppler`。这个需要自己装。
 
 ## device
 

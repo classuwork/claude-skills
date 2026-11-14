@@ -21,7 +21,7 @@ import tempfile
 try:
     from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageOps
 except ImportError:
-    sys.exit("缺少 Pillow:pip3 install Pillow")
+    sys.exit("缺少 Pillow:用同目录的 wm.sh 运行(会自动装),或者 pip3 install Pillow")
 
 Image.MAX_IMAGE_PIXELS = 300_000_000
 
@@ -252,7 +252,7 @@ def do_pdf_vector(path, lines, opt, tmpdir):
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
     except ImportError:
-        sys.exit("--keep-vector 需要:pip3 install pypdf reportlab")
+        sys.exit("--keep-vector 需要 pypdf、reportlab:用同目录的 wm.sh 运行(会自动装),或者 pip3 install pypdf reportlab")
 
     # reportlab 只认 TrueType 轮廓的字体,挨个试
     font_name = None
@@ -271,8 +271,9 @@ def do_pdf_vector(path, lines, opt, tmpdir):
     reader = PdfReader(path)
     if reader.is_encrypted:
         sys.exit("PDF 已加密,无法加水印:%s" % path)
-    writer = PdfWriter()
-    for page in reader.pages:
+    # 页面要先挂到 writer 上再改:pypdf 7 起,改没挂到 writer 的页会直接报错
+    writer = PdfWriter(clone_from=reader)
+    for page in writer.pages:
         page.transfer_rotation_to_content()  # 带 /Rotate 的页先摆正,水印方向才对
         pw, ph = float(page.mediabox.width), float(page.mediabox.height)
         x0, y0 = float(page.mediabox.left), float(page.mediabox.bottom)
@@ -305,7 +306,6 @@ def do_pdf_vector(path, lines, opt, tmpdir):
         c.save()
         buf.seek(0)
         page.merge_page(PdfReader(buf).pages[0])
-        writer.add_page(page)
     dst = out_path(path, opt.outdir, ".pdf", opt.tag)
     with open(dst, "wb") as f:
         writer.write(f)

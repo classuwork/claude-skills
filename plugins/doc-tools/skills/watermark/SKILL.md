@@ -9,7 +9,8 @@ allowed-tools: Bash
 证件、执照、合同这类文件发给第三方前,先用 `scripts/watermark.py` 加一层斜向铺满全页的半透明文字水印,写明用途和日期,再把**加了水印的新文件**发出去。原件不动。
 
 ```bash
-WM="${CLAUDE_PLUGIN_ROOT}/skills/watermark/scripts/watermark.py"
+export WM_DATA="${CLAUDE_PLUGIN_DATA}"
+WM="${CLAUDE_PLUGIN_ROOT}/skills/watermark/scripts/wm.sh"
 ```
 
 ## 硬规矩:不看图
@@ -39,13 +40,13 @@ WM="${CLAUDE_PLUGIN_ROOT}/skills/watermark/scripts/watermark.py"
 
    ```bash
    # 逐个加,图片还是图片,PDF 还是 PDF
-   python3 "$WM" 身份证正面.jpg 营业执照.pdf -t "仅用于XX申请 他用无效"
+   sh "$WM" 身份证正面.jpg 营业执照.pdf -t "仅用于XX申请 他用无效"
 
    # 身份证正反面拼到一页 A4 再加水印(常见要求)
-   python3 "$WM" 人像面.jpg 国徽面.jpg --combine ~/Downloads/身份证正反面-水印.pdf -t "仅用于XX申请 他用无效"
+   sh "$WM" 人像面.jpg 国徽面.jpg --combine ~/Downloads/身份证正反面-水印.pdf -t "仅用于XX申请 他用无效"
 
    # 图片也要出 PDF
-   python3 "$WM" 社保记录.jpg --pdf -t "仅用于XX申请 他用无效"
+   sh "$WM" 社保记录.jpg --pdf -t "仅用于XX申请 他用无效"
    ```
 
 3. **看自检输出**,每个文件一行:
@@ -82,7 +83,8 @@ WM="${CLAUDE_PLUGIN_ROOT}/skills/watermark/scripts/watermark.py"
 
 ## 依赖
 
-- Python 3.9+、Pillow:`pip3 install Pillow`
-- PDF 输入:poppler(`brew install poppler`,提供 `pdftoppm`)
-- `--keep-vector`:`pip3 install pypdf reportlab`
+- Python 3.9+。**Pillow 不用自己装**:`wm.sh` 先看系统 `python3` 有没有;没有(包括 Homebrew / uv 的 Python 不让 `pip3 install` 的情况),第一次用时自动在插件数据目录建虚拟环境装上,终端会打一行「首次使用…」,以后直接复用。`--keep-vector` 要的 pypdf、reportlab 同样自动补装。
+- 自动安装失败(没网 / PyPI 连不上)时,脚本会打出手动安装的命令,照着跑一次即可。
+- PDF 输入:poppler(`brew install poppler`,提供 `pdftoppm`),这个要自己装。
+- 一律用 `sh "$WM"` 调用,不要直接 `python3 watermark.py`——直接调就绕过了上面的自动装依赖。
 - 中文字体:macOS 自带;Linux 装 `fonts-noto-cjk`
