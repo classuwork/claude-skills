@@ -33,7 +33,7 @@ a labels 60             # 屏幕上的文字 / 描述 + 中心坐标(找按钮�
 a find "发送通道"        # 点含该文字的元素
 a tap 540 1200          # 按坐标点
 a swipe 540 1800 540 600 300
-a type "abc123"         # 只支持 ASCII;中文在 scrcpy 窗口里打
+a type "abc123"         # 只支持 ASCII;中文在 scrcpy 窗口里打。符号会原样输入,不会被手机当命令执行
 a key back|home|enter|recent|wake
 a launch cn.ppps.forwarder
 a install /path/x.apk
@@ -51,7 +51,7 @@ a grant cn.ppps.forwarder android.permission.RECEIVE_SMS
    ```bash
    $S/get-apk.sh            # 默认 arm64-v8a;老机器用 get-apk.sh armeabi-v7a
    ```
-   从官方 GitHub Release 拉最新版,自动和 GitHub 公布的 SHA-256 比对,不一致就删掉。
+   从官方 GitHub Release 拉最新版,自动和 GitHub 公布的 SHA-256 比对;不一致、或 GitHub 没公布摘要,都删掉并退出。
 4. **安装**:`a install <上一步打印的路径>`。专机别装代理。
 5. **权限**:
    ```bash
@@ -59,7 +59,7 @@ a grant cn.ppps.forwarder android.permission.RECEIVE_SMS
    a perms cn.ppps.forwarder
    ```
    🔴 **小米 / 红米还必须**在 App 权限里开「**通知类短信**」,并在系统「短信」App 设置里**关掉「免费网络短信」**(还不行再关「短信智能识别」)。验证码都是 `106` 开头的服务号发的,MIUI 算「通知类短信」;不开的话**飞书照收,但卡片没有正文**,而且「重发」补不回来。
-6. **发送通道**:App 里「发送通道」→ 新建「飞书群机器人」→ 粘 Webhook → 消息类型「**消息卡片**」→ 标题模板选「短信内容」→「自定义消息卡片 Json」**留空** → 保存 → 测试。Webhook 很长,用 scrcpy 窗口粘贴(Mac 剪贴板会同步到手机)。
+6. **发送通道**(这一步人在 scrcpy 窗口里做,Claude 不截这个页面):App 里「发送通道」→ 新建「飞书群机器人」→ 粘 Webhook → 消息类型「**消息卡片**」→ 标题模板选「短信内容」→「自定义消息卡片 Json」**留空** → 保存 → 测试。Webhook 很长,用 scrcpy 窗口粘贴(Mac 剪贴板会同步到手机)。
 7. **转发规则**:发送方 `*` → 选上一步的通道 → 内容模板**只留「短信内容」**。
 8. **通用设置**:打开「开机自启动」「监听服务常驻」;**请求重试**设最多 5 次、间隔 10 秒(默认 0 次,网络一闪就丢码)。
 
@@ -79,7 +79,7 @@ a grant cn.ppps.forwarder android.permission.RECEIVE_SMS
 
 ## 5. 收不到码怎么查
 
-先看手机上 SmsForwarder 的「转发日志」(可 `a launch cn.ppps.forwarder` 后 `a shot`)。**有日志只说明匹配了规则,不等于到了飞书**;点开那条,滑到详情最底下看结果:
+先看手机上 SmsForwarder 的「转发日志」:**让人在 scrcpy 窗口里自己看**,Claude 不截这个页面(日志里就是短信原文和验证码)。**有日志只说明匹配了规则,不等于到了飞书**;点开那条,滑到详情最底下看结果,把「现象」那一列对应的报错告诉 Claude:
 
 | 现象 | 原因 | 处理 |
 |---|---|---|
@@ -95,7 +95,8 @@ SmsForwarder 只在飞书返回 `code == 0` 时标「成功」。卡片标题栏
 - 收码群**只放需要看码的人**,不进大群。
 - **Webhook 不进 git、不发聊天、不写进文档**。泄露了别人只能往群里发、读不到群;真泄露就在群里重新生成。
 - 只用**自有实名卡**;银行、税务等敏感验证码**绝不走**第三方收码平台。
-- 截屏可能拍到短信和验证码,只用于当前排查,不进仓库、不外发。
+- **会显示验证码或 Webhook 的页面,Claude 不截屏、不跑 `labels`**:转发日志、短信 App、「发送通道」编辑页。这些页面让人在 scrcpy 窗口里看、里面操作;Claude 只在设置页、权限页这类页面上用 `shot` / `labels`。`labels` / `find` 输出里如果出现 Webhook,会自动打码成 `hook/***`,但别依赖这个。
+- 其他截屏只用于当前排查,不进仓库、不外发。
 
 ## 实测
 

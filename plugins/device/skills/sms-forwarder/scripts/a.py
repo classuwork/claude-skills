@@ -16,7 +16,7 @@
   a.py perms <包名>             看这个 App 的运行时权限授予情况
   a.py grant <包名> <权限>      授权,如 android.permission.RECEIVE_SMS
 """
-import os, re, signal, subprocess, sys, xml.etree.ElementTree as ET
+import os, re, shlex, signal, subprocess, sys, xml.etree.ElementTree as ET
 
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # 输出接 head 等被截断时安静退出
 
@@ -30,10 +30,33 @@ def adb(*args, binary=False, check=True):
     return r.stdout if binary else r.stdout.decode(errors="ignore")
 
 
+def sh(*args, check=True):
+    """在手机上跑命令。adb shell 会把参数拼成一行交给手机的 shell 再解析一遍,
+    所以每个参数都要先加引号,不然 ; & ' $() 这类字符会被当成命令执行。"""
+    return adb("shell", " ".join(shlex.quote(str(x)) for x in args), check=check)
+
+
+def num(v):
+    if not re.fullmatch(r"\d+", v):
+        sys.exit(f"坐标 / 时长要是整数:{v!r}")
+    return v
+
+
+# 飞书 Webhook 是密钥:屏幕文字里出现就打码,不打进对话
+HOOK = re.compile(r"(hook/)[\w-]+", re.I)
+
+
+def safe(t):
+    return HOOK.sub(r"\1***", t)
+
+
+UI = "/data/local/tmp/__ui.xml"  # 别放 /sdcard:那里别的 App 也能读
+
+
 def dump_nodes():
-    adb("shell", "uiautomator", "dump", "/sdcard/__ui.xml")
-    xml = adb("exec-out", "cat", "/sdcard/__ui.xml")
-    adb("shell", "rm", "-f", "/sdcard/__ui.xml", check=False)
+    sh("uiautomator", "dump", UI)
+    xml = adb("exec-out", "cat", UI)
+    sh("rm", "-f", UI, check=False)
     out = []
     for n in ET.fromstring(xml[xml.index("<"):]).iter("node"):
         text = n.get("text") or n.get("content-desc") or ""
@@ -59,30 +82,32 @@ def main():
         open(out, "wb").write(adb("exec-out", "screencap", "-p", binary=True)); print("saved", out)
     elif c == "labels":
         for t, x, y, cls, ck in dump_nodes()[: int(a[0]) if a else 80]:
-            print(f"{cls:<16} {t[:40]!r} @({x},{y}){' 可点' if ck == 'true' else ''}")
+            print(f"{cls:<16} {safe(t)[:40]!r} @({x},{y}){' 可点' if ck == 'true' else ''}")
     elif c == "tap":
-        adb("shell", "input", "tap", a[0], a[1]); print("tapped", a[0], a[1])
+        sh("input", "tap", num(a[0]), num(a[1])); print("tapped", a[0], a[1])
     elif c == "find":
         hits = [n for n in dump_nodes() if a[0] in n[0]]
         if not hits: print("NOT FOUND"); return
-        t, x, y, *_ = hits[0]; adb("shell", "input", "tap", str(x), str(y)); print(f"tapped {t!r} @({x},{y})")
+        t, x, y, *_ = hits[0]; sh("input", "tap", x, y); print(f"tapped {safe(t)[:40]!r} @({x},{y})")
     elif c == "swipe":
-        ms = a[4] if len(a) > 4 else "300"; adb("shell", "input", "swipe", *a[:4], ms); print("swiped")
+        ms = a[4] if len(a) > 4 else "300"; sh("input", "swipe", *map(num, a[:4]), num(ms)); print("swiped")
     elif c == "type":
         if any(ord(ch) > 127 for ch in a[0]): sys.exit("adb input text 不支持中文:在 scrcpy 窗口里用键盘输入")
-        adb("shell", "input", "text", a[0].replace(" ", "%s")); print("typed")
+        sh("input", "text", a[0].replace(" ", "%s")); print("typed")
     elif c == "key":
-        adb("shell", "input", "keyevent", str(KEYS.get(a[0], a[0]))); print("key", a[0])
+        k = str(KEYS.get(a[0], a[0]))
+        if not k.isdigit(): sys.exit(f"不认识的按键:{a[0]}(可用 {'/'.join(KEYS)} 或数字键码)")
+        sh("input", "keyevent", k); print("key", a[0])
     elif c == "launch":
-        adb("shell", "monkey", "-p", a[0], "-c", "android.intent.category.LAUNCHER", "1"); print("launched", a[0])
+        sh("monkey", "-p", a[0], "-c", "android.intent.category.LAUNCHER", "1"); print("launched", a[0])
     elif c == "install":
         print(adb("install", "-r", a[0]).strip())
     elif c == "perms":
-        txt = adb("shell", "dumpsys", "package", a[0])
+        txt = sh("dumpsys", "package", a[0])
         for line in txt.splitlines():
             if "permission" in line and "granted=" in line: print(line.strip())
     elif c == "grant":
-        adb("shell", "pm", "grant", a[0], a[1]); print("granted", a[1])
+        sh("pm", "grant", a[0], a[1]); print("granted", a[1])
     else:
         print("未知命令:", c); print(__doc__)
 

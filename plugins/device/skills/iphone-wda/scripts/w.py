@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """WebDriverAgent 小客户端:截屏 / 列元素 / 点击 / 输入 / 滑动 / 回主屏 / 启动 App。
 
-坐标一律用「点(pt)」,不是截图像素。会话 id 缓存在同目录的 .sid 里,失效会自动重建。
+坐标一律用「点(pt)」,不是截图像素。会话 id 缓存在 ~/Library/Caches/iphone-wda/.sid,失效会自动重建。
 用法见 SKILL.md。WDA 地址默认 http://localhost:8100,可用环境变量 WDA_URL 覆盖。
 """
 import base64, json, os, sys, urllib.error, urllib.request
@@ -59,9 +59,10 @@ def main():
                         {"type": "pointerMove", "duration": ms, "x": x2, "y": y2}, {"type": "pointerUp"}]); print("swiped")
     elif c == "click":
         s = sid()
+        q = "'" + a[0].replace("\\", "\\\\").replace("'", "\\'") + "'"  # 按钮名里有 ' 或 \ 时要转义,否则谓词语法错
         for using, val in (("accessibility id", a[0]),
-                           ("predicate string", f"label == '{a[0]}' OR name == '{a[0]}'"),
-                           ("predicate string", f"label CONTAINS '{a[0]}'")):
+                           ("predicate string", f"label == {q} OR name == {q}"),
+                           ("predicate string", f"label CONTAINS {q}")):
             try:
                 e = req("POST", f"/session/{s}/element", {"using": using, "value": val})["value"]
                 eid = e.get("ELEMENT") or list(e.values())[0]
@@ -69,7 +70,7 @@ def main():
             except Exception:
                 continue
         else:
-            print("NOT FOUND")
+            sys.exit("NOT FOUND")
     elif c == "type":
         req("POST", f"/session/{sid()}/wda/keys", {"value": list(a[0])}); print("typed")
     elif c == "home":

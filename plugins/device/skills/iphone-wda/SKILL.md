@@ -16,7 +16,7 @@ allowed-tools: Bash, Read
 |---|---|
 | Xcode | App Store 安装,打开一次,**同意许可协议** |
 | libimobiledevice | `brew install libimobiledevice`(提供 `idevice_id`、`iproxy`) |
-| 开发证书 | Xcode → Settings → Accounts 登录 Apple ID。免费账号也行,但签名 7 天过期 |
+| 开发证书 | Xcode → Settings → Accounts 登录 Apple ID,**再**选中团队 → Manage Certificates → 左下角 + → Apple Development(只登录不会自动有证书,脚本会报「没有 Apple Development 证书」)。免费账号也行,但签名 7 天过期 |
 | 手机信任这台 Mac | 连线后手机上点「信任此电脑」;`idevice_id -l` 能打出 UDID 就对了 |
 | 手机开发者模式 | 设置 → 隐私与安全性 → 开发者模式 → 打开(会重启) |
 
@@ -35,8 +35,9 @@ $S/wda-start.sh <UDID> --rebuild  # 强制重编(换证书 / 签名过期)
 ```
 
 - **签名团队自动识别**:取本机第一张「Apple Development」证书的团队 ID。有多张证书、想用别的,设 `WDA_TEAM=<10 位团队 ID>`。
-- **bundle id** 默认 `com.<本机用户名>.wda.runner`,可用 `WDA_BUNDLE` 改。
-- 已在运行就直接返回;没有编译产物、或产物超过 6 天(签名 7 天过期)会自动重编,约 1 分钟。
+- **bundle id** 默认 `com.<本机用户名>.wda.runner.<团队 ID>`(带团队 ID,不会和用户名相同的别人撞),可用 `WDA_BUNDLE` 改。
+- 同一台手机已在运行就直接返回;换了手机、签名或 WDA 版本,没有编译产物,或产物超过 6 天(签名 7 天过期),都会自动重编,约 1 分钟。8100 被别的程序占着会直接报出来,不会误当成 WDA。
+- **只经数据线访问**:WDA 默认对手机所在的整个 Wi-Fi 开放、不要密码。脚本让它只听手机本机(操控端口 8100、截屏推流端口 9100 都是),Mac 通过数据线转过去;确认不到这一点就不启动。WDA 固定在一个实测过的版本,不跟上游最新。
 - 编译产物、日志、会话 id 都在 `~/Library/Caches/iphone-wda/`,**不放任何仓库工作区**。
 - **启动前先跟手机主人打招呼**:WDA 运行时手机屏幕上会一直有一行白字(「自动化运行中」)。
 
@@ -69,7 +70,7 @@ w launch com.xxx.bundleid   # 启动 App
 $S/wda-stop.sh
 ```
 
-关不掉就在手机上**同时按住两个音量键**几秒强制结束。手机上会留一个 WebDriverAgentRunner App,下次直接 `wda-start.sh`,不用重装。
+只关 `wda-start.sh` 自己起的进程,本机别的 Xcode 测试不受影响。关不掉就在手机上**同时按住两个音量键**几秒强制结束。手机上会留一个 WebDriverAgentRunner App,下次直接 `wda-start.sh`,不用重装。
 
 ## 🔴 规矩
 
@@ -85,10 +86,11 @@ $S/wda-stop.sh
 | `Developer Mode disabled` | 手机开开发者模式(见第 0 节) |
 | `isn't registered in your developer account` | 脚本已带 `-allowProvisioningDeviceRegistration`,一般会自动登记;还不行看 `build.log` |
 | 编译报许可没同意 | 用第 0 节的 `osascript` 弹窗同意 |
-| 没读出团队 ID / 没有证书 | Xcode 登录 Apple ID;或手动 `WDA_TEAM=<id> $S/wda-start.sh` |
+| 没读出团队 ID / 没有证书 | 按第 0 节在 Manage Certificates 里建 Apple Development 证书;或手动 `WDA_TEAM=<id> $S/wda-start.sh` |
 | `Unlock ... to Continue` | 手机锁屏了,解锁后重跑 |
 | 第一次装到新手机后打不开 | 手机:设置 → 通用 → VPN 与设备管理 → 点开发者证书 → 信任 |
-| 8100 被占 / 状态不对 | 先 `wda-stop.sh` 再 `wda-start.sh` |
+| `8100 端口被别的程序占着` | 按提示用 `lsof` 找到并关掉那个程序 |
+| 状态不对 | 先 `wda-stop.sh` 再 `wda-start.sh` |
 
 日志:`~/Library/Caches/iphone-wda/build.log`(编译)、`wda-run.log`(运行)、`iproxy.log`。
 

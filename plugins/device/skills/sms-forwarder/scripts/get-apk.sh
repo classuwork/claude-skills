@@ -1,7 +1,7 @@
 #!/bin/zsh
 # 从 SmsForwarder 官方 GitHub Release 下载最新 APK 并核对 SHA-256。
 # 用法: get-apk.sh [abi]   abi 默认 arm64-v8a(红米 K40 等 64 位机);老机器可用 armeabi-v7a
-# 下载到 ~/Downloads/SmsForwarder/,打印本地路径。核对不上就删掉文件并退出。
+# 下载到 ~/Downloads/SmsForwarder/,打印本地路径。核对不上、或 GitHub 没公布摘要没法核对,都删掉文件并退出。
 set -eu
 ABI=${1:-arm64-v8a}
 OUT=~/Downloads/SmsForwarder; mkdir -p $OUT
@@ -20,6 +20,8 @@ if [[ $DIGEST == sha256:* ]]; then
   [[ ${DIGEST#sha256:} == $LOCAL ]] || { rm -f "$OUT/$NAME"; echo "SHA-256 不一致,已删除"; exit 1; }
   echo "SHA-256 与 GitHub 公布的一致:$LOCAL"
 else
-  echo "GitHub 没公布这个文件的摘要,本地 SHA-256:$LOCAL(请到 Release 页人工对照)"
+  rm -f "$OUT/$NAME"
+  echo "GitHub 没公布这个文件的 SHA-256,没法核对,已删除。到 https://github.com/pppscn/SmsForwarder/releases 手动下载并对照校验值"
+  exit 1
 fi
 echo "$OUT/$NAME"

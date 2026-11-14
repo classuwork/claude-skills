@@ -142,5 +142,6 @@ done
 
 两个 skill 的完整用法、一次性准备和排错方法，都写在各自的 SKILL.md 里：
 
-- **iphone-wda**：需要先装 Xcode，并在 Xcode 里登录 Apple ID；运行 `brew install libimobiledevice`；手机要打开开发者模式，并点「信任此电脑」。签名团队会自动识别，不需要在脚本里填自己的 ID。WDA 运行期间手机屏幕上会一直显示一行提示，用之前先跟手机主人打个招呼。
-- **sms-forwarder**：需要运行 `brew install --cask android-platform-tools` 和 `brew install scrcpy`；手机要打开 USB 调试。飞书 Webhook 只粘贴在手机 App 里，不要写进任何文件。
+- **iphone-wda**：需要先装 Xcode，在 Xcode 里登录 Apple ID，**再建一张开发证书**（Xcode → Settings → Accounts → 选中团队 → Manage Certificates → 左下角 + → Apple Development，只登录不会自动有）；运行 `brew install libimobiledevice`；手机要打开开发者模式，并点「信任此电脑」。签名团队会自动识别，不需要在脚本里填自己的 ID。手机只经数据线被操控，同一个 Wi-Fi 里的其他人连不上。WDA 运行期间手机屏幕上会一直显示一行提示，用之前先跟手机主人打个招呼。
+- 关 WDA 只关它自己起的进程，本机别的 Xcode 测试不受影响。
+- **sms-forwarder**：需要运行 `brew install --cask android-platform-tools` 和 `brew install scrcpy`；手机要打开 USB 调试。飞书 Webhook 只粘贴在手机 App 里，不要写进任何文件。会显示验证码或 Webhook 的页面（转发日志、短信、发送通道），由人在 scrcpy 投屏窗口里看，Claude 不截屏。
