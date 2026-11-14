@@ -1,6 +1,6 @@
 {
   "name": "device",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "真机操控:iPhone(WebDriverAgent)截屏 / 点击 / 输入;安卓专机 SmsForwarder 短信转发到飞书群 + adb 操控",
   "author": {
     "name": "happy"
