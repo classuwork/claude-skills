@@ -15,18 +15,25 @@ done
 has() { "$1" -c "import $(echo $MODS | tr ' ' ',')" 2>/dev/null; }
 
 command -v python3 >/dev/null 2>&1 || { echo "没找到 python3:先装 Python 3.9 以上(Mac 上在终端跑一次 python3,按提示装命令行工具)" >&2; exit 1; }
-# reportlab 5.1 起不支持 Python 3.9(苹果自带的就是 3.9),但安装信息里没写,pip 会照装、一导入就报错 ⇒ 3.9 上限定 5.0.x
-python3 -c "import sys; sys.exit(sys.version_info < (3, 10))" || PKGS=$(echo "$PKGS" | sed 's/reportlab/reportlab<5.1/')
 
 if has python3; then
   PY=python3
 elif [ -x "$V/bin/python" ] && has "$V/bin/python"; then
   PY="$V/bin/python"
 else
+  { [ -x "$V/bin/python" ] || python3 -m venv "$V"; } ||
+    { echo "建虚拟环境失败:$V" >&2; exit 1; }
+  # reportlab 5.1 起不支持 Python 3.9(苹果自带的就是 3.9),但安装信息里没写,pip 会照装、一导入就报错
+  # ⇒ 装进 3.9 时限定 5.0.x。看的是虚拟环境自己的 Python,不是现在 PATH 上的 python3
+  "$V/bin/python" -c "import sys; sys.exit(sys.version_info < (3, 10))" ||
+    PKGS=$(echo "$PKGS" | sed 's/reportlab/reportlab<5.1/')
   echo "首次使用:系统 Python 缺少 $PKGS,在 $V 建虚拟环境安装(只装这一次)…" >&2
-  { [ -x "$V/bin/python" ] || python3 -m venv "$V"; } &&
-    "$V/bin/python" -m pip install -q --disable-pip-version-check $PKGS >&2 ||
-    { echo "自动安装失败(多半是没网或 PyPI 连不上)。可以手动跑:\"$V/bin/python\" -m pip install $PKGS" >&2; exit 1; }
+  # shellcheck disable=SC2086  # PKGS 故意按空格拆成多个包名
+  "$V/bin/python" -m pip install -q --disable-pip-version-check $PKGS >&2 || {
+    Q=$(for p in $PKGS; do printf " '%s'" "$p"; done)
+    echo "自动安装失败(多半是没网或 PyPI 连不上)。可以手动跑:\"$V/bin/python\" -m pip install$Q" >&2
+    exit 1
+  }
   PY="$V/bin/python"
 fi
 exec "$PY" "$HERE/watermark.py" "$@"

@@ -85,6 +85,6 @@ WM="${CLAUDE_PLUGIN_ROOT}/skills/watermark/scripts/wm.sh"
 
 - Python 3.9+。**Pillow 不用自己装**:`wm.sh` 先看系统 `python3` 有没有;没有(包括 Homebrew / uv 的 Python 不让 `pip3 install` 的情况),第一次用时自动在插件数据目录建虚拟环境装上,终端会打一行「首次使用…」,以后直接复用。`--keep-vector` 要的 pypdf、reportlab 同样自动补装。
 - 自动安装失败(没网 / PyPI 连不上)时,脚本会打出手动安装的命令,照着跑一次即可。
-- PDF 输入:poppler(`brew install poppler`,提供 `pdftoppm`),这个要自己装。
+- PDF 输入:poppler(`brew install poppler`,提供 `pdftoppm`),这个要自己装。`--keep-vector` 也要:靠它渲染出来比像素,确认水印印上了。
 - 一律用 `sh "$WM"` 调用,不要直接 `python3 watermark.py`——直接调就绕过了上面的自动装依赖。
 - 中文字体:macOS 自带;Linux 装 `fonts-noto-cjk`

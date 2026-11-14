@@ -158,7 +158,7 @@ def open_image(path, tmpdir):
 
 def pdf_pages(path, dpi, tmpdir):
     if not shutil.which("pdftoppm"):
-        sys.exit("PDF 需要 pdftoppm:brew install poppler(或改用 --keep-vector)")
+        sys.exit("PDF 需要 pdftoppm:brew install poppler")
     prefix = os.path.join(tmpdir, "pg")
     r = subprocess.run(["pdftoppm", "-r", str(dpi), "-png", path, prefix],
                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -248,11 +248,15 @@ def do_pdf_flatten(path, lines, opt, tmpdir):
 def do_pdf_vector(path, lines, opt, tmpdir):
     try:
         from pypdf import PdfReader, PdfWriter
+        from pypdf.generic import ArrayObject, NameObject
         from reportlab.pdfgen import canvas as rl_canvas
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
     except ImportError:
         sys.exit("--keep-vector 需要 pypdf、reportlab:用同目录的 wm.sh 运行(会自动装),或者 pip3 install pypdf reportlab")
+    # 加完要渲染出来比像素,确认水印真印上了;没有 pdftoppm 就没法确认,不出文件
+    if not shutil.which("pdftoppm"):
+        sys.exit("--keep-vector 也需要 pdftoppm 来确认水印印上了:brew install poppler")
 
     # reportlab 只认 TrueType 轮廓的字体,挨个试
     font_name = None
@@ -271,8 +275,19 @@ def do_pdf_vector(path, lines, opt, tmpdir):
     reader = PdfReader(path)
     if reader.is_encrypted:
         sys.exit("PDF 已加密,无法加水印:%s" % path)
-    # 页面要先挂到 writer 上再改:pypdf 7 起,改没挂到 writer 的页会直接报错
-    writer = PdfWriter(clone_from=reader)
+    # 页面要先挂到 writer 上再改:pypdf 7 起,改没挂到 writer 的页会直接报错。
+    # 只拷页面,不用 clone_from 拷整份文档:那样会把 PDF 里夹带的附件(可能就是没加水印的原件)一起带出去
+    writer = PdfWriter()
+    for src_page in reader.pages:
+        # 页面上的「附件」注释同理,也会带出原件。要在 add_page 之前去掉:
+        # add_page 会把页面引用到的对象都拷进 writer,之后再删注释,附件内容照样写进文件
+        if "/Annots" in src_page:
+            keep = [a for a in src_page["/Annots"] if a.get_object().get("/Subtype") != "/FileAttachment"]
+            if keep:
+                src_page[NameObject("/Annots")] = ArrayObject(keep)
+            else:
+                del src_page["/Annots"]
+        writer.add_page(src_page)
     for page in writer.pages:
         page.transfer_rotation_to_content()  # 带 /Rotate 的页先摆正,水印方向才对
         pw, ph = float(page.mediabox.width), float(page.mediabox.height)
@@ -315,19 +330,20 @@ def do_pdf_vector(path, lines, opt, tmpdir):
         os.remove(dst)
         print("FAIL %s | 输出页数 %d 和原件 %d 不符,输出已删除" % (path, n, len(reader.pages)))
         return False
-    # 自检:两边各渲染第一页的低分辨率位图,只比像素差,不输出图像
-    ratio = 1.0
-    if shutil.which("pdftoppm"):
-        sub_a = tempfile.mkdtemp(dir=tmpdir)
-        sub_b = tempfile.mkdtemp(dir=tmpdir)
-        a = subprocess.run(["pdftoppm", "-r", "50", "-f", "1", "-l", "1", "-png", path,
-                            os.path.join(sub_a, "pg")], stderr=subprocess.DEVNULL)
-        b = subprocess.run(["pdftoppm", "-r", "50", "-f", "1", "-l", "1", "-png", dst,
-                            os.path.join(sub_b, "pg")], stderr=subprocess.DEVNULL)
-        fa, fb = os.listdir(sub_a), os.listdir(sub_b)
-        if a.returncode == 0 and b.returncode == 0 and fa and fb:
-            ratio = changed_ratio(Image.open(os.path.join(sub_a, fa[0])),
-                                  Image.open(os.path.join(sub_b, fb[0])))
+    # 自检:两边各渲染第一页的低分辨率位图,只比像素差,不输出图像。渲染失败就算没通过
+    sub_a = tempfile.mkdtemp(dir=tmpdir)
+    sub_b = tempfile.mkdtemp(dir=tmpdir)
+    a = subprocess.run(["pdftoppm", "-r", "50", "-f", "1", "-l", "1", "-png", path,
+                        os.path.join(sub_a, "pg")], stderr=subprocess.DEVNULL)
+    b = subprocess.run(["pdftoppm", "-r", "50", "-f", "1", "-l", "1", "-png", dst,
+                        os.path.join(sub_b, "pg")], stderr=subprocess.DEVNULL)
+    fa, fb = os.listdir(sub_a), os.listdir(sub_b)
+    if not (a.returncode == 0 and b.returncode == 0 and fa and fb):
+        os.remove(dst)
+        print("FAIL %s | 渲染不出来,没法确认水印印上了,输出已删除" % path)
+        return False
+    ratio = changed_ratio(Image.open(os.path.join(sub_a, fa[0])),
+                          Image.open(os.path.join(sub_b, fb[0])))
     ok = report(path, dst, n, (int(pw), int(ph)), ratio)
     if ok:
         print("     ↑ 矢量叠加:原文字仍可选中,但水印能被 PDF 编辑软件删掉;尺寸单位是 pt")
